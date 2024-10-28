@@ -1,54 +1,52 @@
 // components/chat-interface.tsx
-'use client';
+'use client'
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Send, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { ThemeToggle } from '@/components/theme-toggle';
-
-import ReactMarkdown from 'react-markdown';
+import React, { useState, useRef, useEffect } from 'react'
+import { Send, Loader2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent } from '@/components/ui/card'
+import { Header } from '@/components/header'
+import ReactMarkdown from 'react-markdown'
 
 interface Message {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
+  role: 'system' | 'user' | 'assistant'
+  content: string
 }
 
 export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'system',
-      content:
-        "You are Grok, a chatbot inspired by the Hitchhiker's Guide to the Galaxy.",
+      content: 'You are an AI Assistant',
     },
-  ]);
-  const [inputMessage, setInputMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  ])
+  const [inputMessage, setInputMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    scrollToBottom()
+  }, [messages])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputMessage.trim()) return;
+    e.preventDefault()
+    if (!inputMessage.trim()) return
 
-    const userMessage: Message = { role: 'user', content: inputMessage };
-    setMessages((prev) => [...prev, userMessage]);
-    setInputMessage('');
-    setIsLoading(true);
+    const userMessage: Message = { role: 'user', content: inputMessage }
+    setMessages((prev) => [...prev, userMessage])
+    setInputMessage('')
+    setIsLoading(true)
 
     try {
       const requestPayload = {
         model: 'grok-beta',
         messages: [...messages, userMessage],
-      };
+      }
 
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -56,25 +54,25 @@ export default function ChatInterface() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestPayload),
-      });
+      })
 
-      const responseText = await response.text();
+      const responseText = await response.text()
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.status} - ${responseText}`);
+        throw new Error(`API error: ${response.status} - ${responseText}`)
       }
 
-      const data = JSON.parse(responseText);
-      const content = data.choices[0].message.content || 'No response received';
+      const data = JSON.parse(responseText)
+      const content = data.choices[0].message.content || 'No response received'
 
       const assistantMessage: Message = {
         role: 'assistant',
         content: content,
-      };
+      }
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => [...prev, assistantMessage])
     } catch (error) {
-      console.error('Detailed error:', error);
+      console.error('Detailed error:', error)
 
       const errorMessage: Message = {
         role: 'assistant',
@@ -84,22 +82,16 @@ export default function ChatInterface() {
                 error instanceof Error ? error.message : 'Unknown error'
               }`
             : 'Sorry, I encountered an error. Please try again.',
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      }
+      setMessages((prev) => [...prev, errorMessage])
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
     <div className='flex flex-col h-screen bg-background'>
-      <Card className='rounded-none border-b'>
-        <CardContent className='p-4 flex justify-between items-center'>
-          <h1 className='text-xl font-semibold'>Grok Chat</h1>
-          <ThemeToggle />
-        </CardContent>
-      </Card>
-
+      <Header />
       <div className='flex-1 overflow-y-auto p-4 space-y-4'>
         {messages
           .filter((m) => m.role !== 'system')
@@ -209,5 +201,5 @@ export default function ChatInterface() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

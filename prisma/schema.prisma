@@ -1,0 +1,50 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id
+  email         String    @unique
+  credits       Float     @default(0)
+  chats         Chat[]
+  payments      Payment[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Chat {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  chatId    String
+  chat      Chat     @relation(fields: [chatId], references: [id])
+  content   String   @db.Text
+  role      String   // 'user' or 'assistant'
+  cost      Float?   // cost in credits
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  amount      Float    // amount in USD
+  credits     Float    // number of credits purchased
+  status      String   // 'pending', 'completed', 'failed'
+  stripeId    String?  // Stripe payment intent ID
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
