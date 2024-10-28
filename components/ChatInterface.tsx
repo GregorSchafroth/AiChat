@@ -1,13 +1,14 @@
-// components/chat-interface.tsx
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { Send, Loader2 } from 'lucide-react'
+import { Send, Loader2, Coins } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
-import { Header } from '@/components/header'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import ReactMarkdown from 'react-markdown'
+import getUserBalance from '@/app/actions/getUserBalance'
+import spendCoins from '@/app/actions/spendCoins'
 
 interface Message {
   role: 'system' | 'user' | 'assistant'
@@ -23,7 +24,21 @@ export default function ChatInterface() {
   ])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [coins, setCoins] = useState<number | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Fetch initial coin balance
+  useEffect(() => {
+    const fetchCoins = async () => {
+      const { coins } = await getUserBalance()
+      if (coins) {
+        setCoins(coins)
+      } else {
+        setCoins(0)
+      }
+    }
+    fetchCoins()
+  }, [])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -37,12 +52,29 @@ export default function ChatInterface() {
     e.preventDefault()
     if (!inputMessage.trim()) return
 
+    // Check coins before proceeding
+    const currentBalance = await getUserBalance()
+    if (currentBalance.coins == undefined || currentBalance.coins < 1) {
+      setCoins(0) // Update local state
+      return // Don't proceed with the message
+    }
+
     const userMessage: Message = { role: 'user', content: inputMessage }
     setMessages((prev) => [...prev, userMessage])
     setInputMessage('')
     setIsLoading(true)
 
     try {
+      // Deduct coin first
+      const spendResult = await spendCoins(1)
+
+      if (spendResult.error) {
+        throw new Error(spendResult.error)
+      }
+
+      // Update local coins state after successful spend
+      setCoins((prev) => (prev !== null ? prev - 1 : null))
+
       const requestPayload = {
         model: 'grok-beta',
         messages: [...messages, userMessage],
@@ -77,11 +109,9 @@ export default function ChatInterface() {
       const errorMessage: Message = {
         role: 'assistant',
         content:
-          process.env.NODE_ENV === 'development'
-            ? `Debug Error: ${
-                error instanceof Error ? error.message : 'Unknown error'
-              }`
-            : 'Sorry, I encountered an error. Please try again.',
+          error instanceof Error
+            ? error.message
+            : 'An error occurred. Please try again.',
       }
       setMessages((prev) => [...prev, errorMessage])
     } finally {
@@ -89,9 +119,11 @@ export default function ChatInterface() {
     }
   }
 
+  // Show no coins message when coins is exactly 0
+  const showNoCoinsMessage = coins === 0
+
   return (
-    <div className='flex flex-col h-screen bg-background'>
-      <Header />
+    <div className='flex flex-col flex-1'>
       <div className='flex-1 overflow-y-auto p-4 space-y-4'>
         {messages
           .filter((m) => m.role !== 'system')
@@ -112,66 +144,7 @@ export default function ChatInterface() {
                 {message.role === 'user' ? (
                   message.content
                 ) : (
-                  <ReactMarkdown
-                    className='prose dark:prose-invert max-w-none'
-                    components={{
-                      // Override default element styling
-                      p: ({ children }) => (
-                        <p className='mt-4 first:mt-0'>{children}</p>
-                      ),
-                      ul: ({ children }) => (
-                        <ul className='list-disc pl-4 mt-4 space-y-2'>
-                          {children}
-                        </ul>
-                      ),
-                      ol: ({ children }) => (
-                        <ol className='list-decimal pl-4 mt-4 space-y-2'>
-                          {children}
-                        </ol>
-                      ),
-                      li: ({ children }) => (
-                        <li className='ml-4'>{children}</li>
-                      ),
-                      strong: ({ children }) => (
-                        <strong className='font-bold'>{children}</strong>
-                      ),
-                      em: ({ children }) => (
-                        <em className='italic'>{children}</em>
-                      ),
-                      h1: ({ children }) => (
-                        <h1 className='text-2xl font-bold mt-6 mb-4'>
-                          {children}
-                        </h1>
-                      ),
-                      h2: ({ children }) => (
-                        <h2 className='text-xl font-bold mt-6 mb-3'>
-                          {children}
-                        </h2>
-                      ),
-                      h3: ({ children }) => (
-                        <h3 className='text-lg font-bold mt-6 mb-2'>
-                          {children}
-                        </h3>
-                      ),
-                      blockquote: ({ children }) => (
-                        <blockquote className='border-l-4 border-gray-300 pl-4 italic my-4'>
-                          {children}
-                        </blockquote>
-                      ),
-                      code: ({ children }) => (
-                        <code className='bg-gray-100 rounded px-1 py-0.5'>
-                          {children}
-                        </code>
-                      ),
-                      pre: ({ children }) => (
-                        <pre className='bg-gray-100 rounded p-4 overflow-x-auto my-4'>
-                          {children}
-                        </pre>
-                      ),
-                    }}
-                  >
-                    {message.content}
-                  </ReactMarkdown>
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
                 )}
               </div>
             </div>
@@ -184,17 +157,37 @@ export default function ChatInterface() {
         )}
         <div ref={messagesEndRef} />
       </div>
-
+      {showNoCoinsMessage && (
+          <div className="max-w-full">
+          <Alert className='m-4'>
+            <Coins className='h-4 w-4' />
+            <AlertTitle>Out of Coins</AlertTitle>
+            <AlertDescription>
+              You need coins to continue chatting with the AI. Please get more
+              coins to continue the conversation.
+            </AlertDescription>
+          </Alert>
+          </div>
+      )}
       <Card className='rounded-none border-t'>
         <CardContent className='p-4'>
           <form onSubmit={handleSubmit} className='flex space-x-2'>
             <Input
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              placeholder='Type your message...'
+              placeholder={
+                showNoCoinsMessage
+                  ? 'Get more coins to continue...'
+                  : 'Type your message...'
+              }
+              disabled={showNoCoinsMessage}
               className='flex-1'
             />
-            <Button type='submit' disabled={isLoading} size='icon'>
+            <Button
+              type='submit'
+              disabled={isLoading || showNoCoinsMessage}
+              size='icon'
+            >
               <Send className='h-5 w-5' />
             </Button>
           </form>

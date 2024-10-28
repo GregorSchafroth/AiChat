@@ -1,5 +1,5 @@
 // app/layout.tsx
-import { ThemeProvider } from '@/components/theme-provider';
+import { ThemeProvider } from '@/components/ThemeProvider';
 import type { Metadata } from 'next';
 import {
   ClerkProvider,
