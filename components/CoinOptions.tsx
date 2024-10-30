@@ -47,6 +47,7 @@ const CoinsPage = () => {
       <h1 className='text-3xl font-bold text-black dark:text-white mb-8'>
         Buy Coins
       </h1>
+      <p>one message costs one 🪙</p>
       <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 w-full'>
         {coinOptions.map((option) => (
           <Card
