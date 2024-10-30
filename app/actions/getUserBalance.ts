@@ -1,4 +1,4 @@
-// lib/getUserBalance.ts
+// app/actions/getUserBalance.ts
 
 'use server'
 

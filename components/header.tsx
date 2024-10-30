@@ -1,6 +1,4 @@
 // components/header.tsx
-'use server'
-
 import { SignInButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -9,7 +7,7 @@ import Balance from './Balance'
 import { Suspense } from 'react'
 import Link from 'next/link'
 
-export default async function Header() {
+export default function Header() {
   return (
     <Card className='rounded-none border-b'>
       <CardContent className='p-3 flex justify-between items-center'>

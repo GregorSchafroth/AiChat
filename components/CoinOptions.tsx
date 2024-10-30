@@ -1,21 +1,53 @@
-// pages/coins.js
+// components/CoinOptions.tsx
+
+'use client'
 
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
-import React from 'react'
-
-const coinOptions = [
-  { amount: 50, price: 1 },
-  { amount: 110, price: 2 },
-  { amount: 300, price: 5 },
-  { amount: 650, price: 10 },
-]
+import { Card, CardFooter, CardHeader } from '@/components/ui/card'
+import { useState } from 'react'
+import { coinOptions } from '@/data/coinOptionsList'
+import { createCheckoutSession } from '@/server/stripe'
+import { useToast } from "@/hooks/use-toast"
 
 const CoinsPage = () => {
+  const [isLoading, setIsLoading] = useState<number | null>(null)
+  const { toast } = useToast()
+
+  const handlePurchase = async (amount: number) => {
+    try {
+      setIsLoading(amount)
+      const result = await createCheckoutSession(amount)
+      console.log('Checkout Session Result:', result);
+      
+      if (result.error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to create checkout session"
+        })
+        return
+      }
+
+      if (result.url) {
+        window.location.href = result.url
+      }
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Something went wrong"
+      })
+    } finally {
+      setIsLoading(null)
+    }
+  }
+
   return (
     <div className='flex flex-col items-center justify-center flex-1 bg-gray-100 dark:bg-gray-900 p-6'>
-      <h1 className='text-3xl font-bold text-black dark:text-white mb-8'>Buy Coins</h1>
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full'>
+      <h1 className='text-3xl font-bold text-black dark:text-white mb-8'>
+        Buy Coins
+      </h1>
+      <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 w-full'>
         {coinOptions.map((option) => (
           <Card
             key={option.amount}
@@ -32,8 +64,12 @@ const CoinsPage = () => {
               </div>
             </CardHeader>
             <CardFooter>
-              <Button className='w-full bg-black text-white hover:bg-gray-800 transition duration-200'>
-                Buy Now
+              <Button 
+                className='w-full bg-black text-white hover:bg-gray-800 dark:hover:bg-gray-900 transition duration-200'
+                onClick={() => handlePurchase(option.amount)}
+                disabled={isLoading === option.amount}
+              >
+                {isLoading === option.amount ? 'Loading...' : 'Buy Now'}
               </Button>
             </CardFooter>
           </Card>

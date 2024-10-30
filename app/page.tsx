@@ -7,7 +7,9 @@ export default function Home() {
     <main className='min-h-screen'>
       <div className='flex flex-col h-screen bg-background'>
         <Header />
-        <ChatInterface />
+        <div className='flex-grow overflow-hidden'>
+          <ChatInterface />
+        </div>
       </div>
     </main>
   )
